@@ -29,6 +29,15 @@ define(function (require) {
   function split_to_array(str) {
     return str.match(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\s\S]/g) || [];
   }
+  
+  function get_preferred_font_size(default_font_size, height, length) {
+    if (length == 0) {
+      return default_font_size;
+    }
+    
+    var size = height / length;
+    return (default_font_size < size) ? default_font_size : size;
+  }
 
   function add_postal_code(pdf_objects, postal_code, parameters, font_name) {
     if (postal_code == null) {
@@ -50,6 +59,168 @@ define(function (require) {
     }
   }
 
+  function add_address(pdf_objects, address, font_name, calculator) {
+    var space = "";
+    var max_length = 0;
+    var address_array = address.split("\n");
+    for (var i = 0; i < address_array.length; i++) {
+      address_array[i] = space + address_array[i];
+      space += "　";
+      
+      if (max_length < address_array[i].length) {
+        max_length = address_array[i].length;
+      }
+    }
+    
+    var font_size = calculator.get_font_size(max_length);
+    
+    var top_base = calculator.get_top_base(font_size, max_length);
+    
+    var left_base = calculator.get_left_base(font_size, address_array.length);
+    var left_bases = [];
+    for (var i = 0; i < address_array.length; i++) {
+      left_bases.push(left_base - (i * font_size));
+    }
+    
+    for (var i = 0; i < address_array.length; i++) {
+      function convert_numbers(match, offset, string) {
+        var targets = { "-" : "ー", "0" : "〇", "1" : "一", "2" : "二", "3" : "三", "4" : "四", "5" : "五", "6" : "六", "7" : "七", "8" : "八", "9" : "九" };
+        return targets[match];
+      }
+      var clean_address = address_array[i].replace(/[-0-9]/g, convert_numbers);
+      pdf_objects.push({
+        "direction" : "v",
+        "font" : font_name,
+        "font_size" : font_size,
+        "output_type" : "TextDraw",
+        "text" : clean_address,
+        "x" : left_bases[i],
+        "y" : top_base
+      });
+    }
+  }
+
+  function get_max_length(strings) {
+    var string_lengths = strings.map(function (string) { return string.length; });
+    return Math.max.apply(null, string_lengths);
+  }
+  
+  function add_names(pdf_objects, household, honorific, font_name, calculator) {
+    var given_names = household.given_names.split("\n");
+    var max_given_name_length = get_max_length(given_names);
+    var family_name_length = household.family_name.length;
+    var honorific_length = honorific == null ? 0 : honorific.length;
+    var total_length = family_name_length + 1 + max_given_name_length + (honorific_length == 0 ? 0 : 1) + honorific_length;
+    
+    var preferred_font_size = calculator.get_font_size(total_length);
+    var top_base = calculator.get_top_base(preferred_font_size, total_length);
+    
+    var given_names_top = top_base - (preferred_font_size * (family_name_length + (family_name_length == 0 ? 0 : 1)));
+    
+    var honer_top = given_names_top - (preferred_font_size * (max_given_name_length + 1));
+    
+    var left_base = calculator.get_left_base(preferred_font_size, given_names.length);
+    
+    var left_bases = [left_base];
+    //var font_sizes = [preferred_font_size];
+    for (var i = 1; i < given_names.length; i++) {
+      left_bases.push(left_bases[i - 1] - preferred_font_size);
+      //font_sizes.push(preferred_font_size);
+    }
+
+    // Family Name
+    pdf_objects.push({
+      "direction" : "v",
+      "font" : font_name,
+      "font_size" : preferred_font_size,
+      "output_type" : "TextDraw",
+      "text" : household.family_name,
+      "x" : left_base,
+      "y" : top_base
+    });
+    
+    // Given Names & Honorific
+    for (var i = 0; i < given_names.length; i++) {
+      pdf_objects.push({
+        "direction" : "v",
+        "font" : font_name,
+        "font_size" : preferred_font_size,
+        "output_type" : "TextDraw",
+        "text" : given_names[i],
+        "x" : left_bases[i],
+        "y" : given_names_top
+      });
+      
+      pdf_objects.push({
+        "direction" : "v",
+        "font" : font_name,
+        "font_size" : preferred_font_size,
+        "output_type" : "TextDraw",
+        "text" : honorific,
+        "x" : left_bases[i],
+        "y" : honer_top
+      });
+    }
+  }
+
+  function add_sender(pdf_objects, sender, font_name) {
+    add_postal_code(pdf_objects, sender.postal_code, DRAW_PARAMETERS.SENDER.POSTAL_CODE, font_name);
+    add_address(pdf_objects, sender.address, font_name, {
+      get_top_base : function (font_size, string_length) {
+        return DRAW_PARAMETERS.SENDER.ADDRESS.BASE.BOTTOM + (font_size * string_length);
+      },
+      get_left_base : function(font_size, count) {
+        var given_names = sender.given_names.split("\n");
+        var max_given_name_length = get_max_length(given_names);
+        var family_name_length = sender.family_name.length;
+        var total_length = family_name_length + 1 + max_given_name_length;
+        var name_font_size = get_preferred_font_size(DRAW_PARAMETERS.SENDER.NAME.FONT_SIZE, DRAW_PARAMETERS.SENDER.NAME.HEIGHT, total_length);
+        var offset = name_font_size * given_names.length;
+        return font_size * (2 + count) + offset;
+      },
+      get_font_size : function (length) {
+        return get_preferred_font_size(DRAW_PARAMETERS.SENDER.ADDRESS.FONT_SIZE, DRAW_PARAMETERS.SENDER.ADDRESS.HEIGHT, length);
+      }
+    });
+    add_names(pdf_objects, sender, null, font_name, {
+      get_top_base : function (font_size, string_length) {
+        return DRAW_PARAMETERS.SENDER.NAME.BASE.BOTTOM + (font_size * string_length);
+      },
+      get_left_base : function(font_size, count) {
+        return DRAW_PARAMETERS.SENDER.NAME.BASE.LEFT + (font_size * count);
+      },
+      get_font_size : function (length) {
+        return get_preferred_font_size(DRAW_PARAMETERS.SENDER.NAME.FONT_SIZE, DRAW_PARAMETERS.SENDER.NAME.HEIGHT, length);
+      }
+    });
+  }
+  
+  function add_receiver(pdf_objects, receiver, font_name) {
+    add_postal_code(pdf_objects, receiver.household.postal_code, DRAW_PARAMETERS.RECEIVER.POSTAL_CODE, font_name);
+    add_address(pdf_objects, receiver.household.address, font_name, {
+      get_top_base : function (font_size, string_length) {
+        return DRAW_PARAMETERS.RECEIVER.ADDRESS.BASE.TOP;
+      },
+      get_left_base : function(font_size, count) {
+        return DRAW_PARAMETERS.RECEIVER.ADDRESS.BASE.LEFT;
+      },
+      get_font_size : function (length) {
+        return get_preferred_font_size(DRAW_PARAMETERS.RECEIVER.ADDRESS.FONT_SIZE, DRAW_PARAMETERS.RECEIVER.ADDRESS.HEIGHT, length);
+      }
+    });
+    add_names(pdf_objects, receiver.household, "様", font_name, {
+      get_top_base : function (font_size, string_length) {
+        return DRAW_PARAMETERS.RECEIVER.NAME.BASE.TOP;
+      },
+      get_left_base : function(font_size, count) {
+        return DRAW_PARAMETERS.RECEIVER.NAME.BASE.CENTER + (font_size / 2.0) * (count - 1);
+      },
+      get_font_size : function (length) {
+        return get_preferred_font_size(DRAW_PARAMETERS.RECEIVER.NAME.FONT_SIZE, DRAW_PARAMETERS.RECEIVER.NAME.HEIGHT, length);
+      }
+    });
+  }
+  
   var AddressPdf = {
     "convert" : function (event) {
       var ids = event.target.split(":");
@@ -63,7 +234,6 @@ define(function (require) {
 
       var grid = detail._controls.receivers._list._grid;
       var recids = grid.selection();
-      debugger;
       if (recids.length == 0) {
         //var message = !entry_props ? "Select one or more items." : Locale.translate(entry_props.select_message);
         //Dialog.show(message, item.text);
@@ -74,9 +244,14 @@ define(function (require) {
       var postal_code = data.sender.postal_code;
       var pdf_objects = [];
       var font_name = "KaiTi";
-      var params = DRAW_PARAMETERS.SENDER.POSTAL_CODE;
-      add_postal_code(pdf_objects, postal_code, DRAW_PARAMETERS.SENDER.POSTAL_CODE, font_name);
-
+      for (var i = 0; i < recids.length; i++) {
+        add_sender(pdf_objects, data.sender, font_name);
+        add_receiver(pdf_objects, data.receivers[recids[i]], font_name);
+        pdf_objects.push({
+          "output_type" : "NewPage",
+        });
+      }
+  
       var pdf_data = {
         "title" : "Address PDF",
         "pdf_objects" : pdf_objects,
@@ -85,6 +260,7 @@ define(function (require) {
           "margins" : { "top" : 0, "left" : 0, "bottom" : 0, "right" : 0 }
         }
       }
+      console.log(pdf_data);
       Connector.pdf(pdf_data);
 
 

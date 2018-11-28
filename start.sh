@@ -1,4 +1,4 @@
-CURRENT_PATH=`pwd`
+#SCRIPT_DIR=`pwd`
+SCRIPT_DIR=$(cd $(dirname $0); pwd)
 cd $1
-TAMES_CONFIG_PATH=${CURRENT_PATH}/config.json lein ring server-headless
-#TAMES_CONFIG_PATH=../tames.nenga/config.json lein ring server-headless
+TAMES_CONFIG_PATH=${SCRIPT_DIR}/config.json lein ring server-headless
