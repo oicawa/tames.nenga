@@ -235,15 +235,16 @@ define(function (require) {
       var grid = detail._controls.receivers._list._grid;
       var recids = grid.selection();
       if (recids.length == 0) {
-        //var message = !entry_props ? "Select one or more items." : Locale.translate(entry_props.select_message);
-        //Dialog.show(message, item.text);
+        debugger;
+        var message = !entry.properties ? "Select one or more receivers." : Locale.translate(entry.properties.message_no_selected);
+        Dialog.show(message, item.text);
         return;
       }
-      
+      debugger;
 
       var postal_code = data.sender.postal_code;
       var pdf_objects = [];
-      var font_name = "KaiTi";
+      var font_name = entry.properties.font;
       for (var i = 0; i < recids.length; i++) {
         add_sender(pdf_objects, data.sender, font_name);
         add_receiver(pdf_objects, data.receivers[recids[i]], font_name);
