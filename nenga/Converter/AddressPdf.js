@@ -208,7 +208,7 @@ define(function (require) {
         return get_preferred_font_size(DRAW_PARAMETERS.RECEIVER.ADDRESS.FONT_SIZE, DRAW_PARAMETERS.RECEIVER.ADDRESS.HEIGHT, length);
       }
     });
-    add_names(pdf_objects, receiver.household, "様", font_name, {
+    add_names(pdf_objects, receiver.household, receiver.honorific, font_name, {
       get_top_base : function (font_size, string_length) {
         return DRAW_PARAMETERS.RECEIVER.NAME.BASE.TOP;
       },
@@ -235,12 +235,10 @@ define(function (require) {
       var grid = detail._controls.receivers._list._grid;
       var recids = grid.selection();
       if (recids.length == 0) {
-        debugger;
         var message = !entry.properties ? "Select one or more receivers." : Locale.translate(entry.properties.message_no_selected);
         Dialog.show(message, item.text);
         return;
       }
-      debugger;
 
       var postal_code = data.sender.postal_code;
       var pdf_objects = [];
