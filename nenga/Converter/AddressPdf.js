@@ -16,11 +16,11 @@ define(function (require) {
   var Action = require("core/Action");
 
   var DRAW_PARAMETERS = {
-    SENDER   : { POSTAL_CODE : { FONT_SIZE : 11, BASE : { TOP : 56, LEFTS : [ 15, 27, 38, 54, 66, 79, 90 ] } },
+    SENDER   : { POSTAL_CODE : { FONT_SIZE : 11, BASE : { TOP : 50, LEFTS : [ 12, 24, 35, 51, 63, 76, 87 ] } },
                  NAME        : { FONT_SIZE : 12, BASE : { LEFT  : 10, BOTTOM : 80 }, HEIGHT : 160 },
                  ADDRESS     : { FONT_SIZE : 12, BASE : { BOTTOM : 80 } ,HEIGHT : 170 }
     },
-    RECEIVER : { POSTAL_CODE : { FONT_SIZE : 14, BASE : { TOP : 377, LEFTS : [ 135, 156, 177, 199, 220, 240, 261 ] } },
+    RECEIVER : { POSTAL_CODE : { FONT_SIZE : 14, BASE : { TOP : 367, LEFTS : [ 130, 151, 173, 195, 216, 236, 257 ] } },
                  NAME        : { FONT_SIZE : 22, BASE : { TOP : 330, CENTER : 145 }, HEIGHT : 280 },
                  ADDRESS     : { FONT_SIZE : 14, BASE : { TOP : 340, LEFT : 260 }, HEIGHT : 280 }
     }
