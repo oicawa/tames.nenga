@@ -233,10 +233,11 @@ define(function (require) {
       var report_layouts = null;
 
       var grid = detail._controls.receivers._list._grid;
-      var recids = grid.selection();
+      var recids = grid.selection(true);
       if (recids.length == 0) {
         var message = !entry.properties ? "Select one or more receivers." : Locale.translate(entry.properties.message_no_selected);
         Dialog.show(message, item.text);
+        grid.refresh();
         return;
       }
 
@@ -261,7 +262,7 @@ define(function (require) {
       }
       console.log(pdf_data);
       Connector.pdf(pdf_data);
-
+      grid.refresh();
 
       /*
       function convert_pdf_params(type, properties) {
